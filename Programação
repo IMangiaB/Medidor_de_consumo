@@ -1,0 +1,200 @@
+#define BLYNK_TEMPLATE_ID "TMPL6B3GG-FUB"
+#define BLYNK_TEMPLATE_NAME "LED"
+#define BLYNK_AUTH_TOKEN "uvI45W7-5wbnT2F_eL70KHu-jx0b1xUg"
+ 
+#include <EmonLib.h>
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>  
+ 
+#define BLYNK_PRINT Serial
+#include <WiFi.h>
+#include <WiFiClient.h>
+#include <BlynkSimpleEsp32.h>
+ 
+char ssid[] = "FMACHADOB2";
+char pass[] = "AC15B05DA012CA200";
+ 
+EnergyMonitor emon1;
+ 
+LiquidCrystal_I2C lcd(0x27,16,2);
+ 
+// Pinos
+int botaoPino = 5;
+const int PINO_SENSOR_TENSAO=33;
+const int PINO_SENSOR_CORRENTE = 32;
+ 
+int maiorValor = 0;
+int valor_inst = 0;
+float tensaoPico = 0;
+float tensaoRms = 0;
+ 
+float potencia=0;
+ 
+int Tela = 0;
+ 
+int bconta_push = 0;
+int bstatus_anterior = 0;
+int bstatus_atual = 0;
+ 
+const double CALIBRACAO_CORRENTE = 8.2;
+ 
+#define N 10
+ 
+ 
+float energia_Wh = 0;
+float custo=0;
+float energia_kWh = 0;
+ 
+#define kWhr 1.00
+ 
+void setup(){
+  Serial.begin(115200);
+ 
+  pinMode(PINO_SENSOR_TENSAO,INPUT);
+  pinMode(botaoPino, INPUT);
+ 
+  lcd.init ();
+  lcd.backlight();
+  lcd.clear();
+ 
+  emon1.current(PINO_SENSOR_CORRENTE, CALIBRACAO_CORRENTE);
+ 
+  Blynk.begin(BLYNK_AUTH_TOKEN, ssid, pass);
+   
+}
+void loop(){
+ 
+  float tensaoPico_somatorio = 0;
+  for(int j=0; j<N; j++){
+    maiorValor = 0;
+ 
+  for (int i=0; i<2000; i++){
+    valor_inst = analogRead(PINO_SENSOR_TENSAO);
+   
+    if (maiorValor < valor_inst){
+      maiorValor = valor_inst;
+    }
+    delayMicroseconds(1);
+  }
+ 
+  if (maiorValor<3000){
+    maiorValor=3000;
+  }
+  tensaoPico = map(maiorValor,3000,3475,0,173);
+  tensaoPico_somatorio += tensaoPico;
+  }
+ 
+  tensaoPico = tensaoPico_somatorio/N;
+  tensaoRms = tensaoPico/1.4;
+ 
+  double Irms = emon1.calcIrms(1480);
+ 
+  if (Irms>0.2){
+    potencia = tensaoRms*Irms;
+  }
+  else if (Irms<=0.2){
+  potencia=0;
+  }
+ 
+energia_Wh = energia_Wh + potencia/3210.0;
+energia_kWh = energia_Wh/1000;
+custo = energia_kWh * kWhr;
+ 
+  String texto = "Corrente: " + String(Irms, 2) + " A";
+  Blynk.virtualWrite(V1, texto);
+  Serial.print("Corrente = ");
+  Serial.println(Irms);
+  String texto1 = "Tensao: " + String(tensaoRms, 2) + " V";
+  Blynk.virtualWrite(V2, texto1);
+  Serial.print("tensao = ");
+  Serial.println(tensaoRms);
+  String texto2 = "Potencia: " + String(potencia, 2) + " W";
+  Blynk.virtualWrite(V3, texto2);
+  Serial.print("Potencia = ");
+  Serial.println(potencia);
+  String texto3 = "Energia: " + String(energia_Wh, 4) + " Wh";
+  Blynk.virtualWrite(V4, texto3);
+  Serial.print("Energia = ");
+  Serial.println(energia_Wh);
+  String texto4 = "Custo: " + String(custo, 2) + " Reais";
+  Blynk.virtualWrite(V5, texto4);
+  Serial.print("Custo = ");
+  Serial.println(custo);
+   String texto5 = "Energia: " + String(energia_kWh, 4) + " Kwh";
+  Blynk.virtualWrite(V6, texto5);
+  Serial.print("Energia kWh = ");
+  Serial.println(energia_kWh);
+  Blynk.run();
+ 
+  bstatus_atual = digitalRead(botaoPino);
+ 
+  if (bstatus_atual != bstatus_anterior){
+    if (bstatus_atual == HIGH){
+      delay (250);
+      bconta_push++;
+      Tela = bconta_push;
+    } else {
+      Serial.println("off");
+    }
+    if (bconta_push > 5){
+      bconta_push = 0;  
+    }
+  }
+  bstatus_anterior = bstatus_atual;
+ 
+  switch (Tela) {
+     
+     default: {
+        //lcd.clear();        
+        lcd.setCursor(0, 0);
+        lcd.print("Custo: ");
+        lcd.setCursor(0,1);
+        lcd.print(custo);
+        break;
+      }
+      case 1: {
+        //lcd.clear();        
+        lcd.setCursor(0, 0);
+        lcd.print("Energia (kWh): ");
+        lcd.setCursor(0,1);
+        lcd.print(energia_kWh);
+        break;
+      }
+      case 2: {
+        //lcd.clear();        
+        lcd.setCursor(0, 0);
+        lcd.print("Energia: ");
+        lcd.setCursor(0,1);
+        lcd.print(energia_Wh);
+        break;
+      }
+      case 3: {
+        //lcd.clear();        
+        lcd.setCursor(0, 0);
+        lcd.print("Potencia: ");
+        lcd.setCursor(0,1);
+        lcd.print(potencia);
+        break;
+      }
+      case 4: {
+        //lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.print("Corrente: ");
+        lcd.setCursor(0,1);
+        lcd.print(Irms);
+        break;
+      }
+       
+      case 5: {
+        //lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.print("Tensao: ");
+        lcd.setCursor(0,1);
+        lcd.print(tensaoRms);
+ 
+       
+        break;
+      }
+  }
+}
+ 
