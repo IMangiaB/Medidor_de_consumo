@@ -1,6 +1,6 @@
-#define BLYNK_TEMPLATE_ID "TMPL6B3GG-FUB"
-#define BLYNK_TEMPLATE_NAME "LED"
-#define BLYNK_AUTH_TOKEN "uvI45W7-5wbnT2F_eL70KHu-jx0b1xUg"
+#define BLYNK_TEMPLATE_ID "****"
+#define BLYNK_TEMPLATE_NAME "****"
+#define BLYNK_AUTH_TOKEN "****"
  
 #include <EmonLib.h>
 #include <Wire.h>
@@ -11,8 +11,8 @@
 #include <WiFiClient.h>
 #include <BlynkSimpleEsp32.h>
  
-char ssid[] = "FMACHADOB2";
-char pass[] = "AC15B05DA012CA200";
+char ssid[] = "****";
+char pass[] = "****";
  
 EnergyMonitor emon1;
  
